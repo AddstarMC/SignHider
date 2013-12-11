@@ -1,0 +1,10 @@
+name: SignHider
+description: A plugin aimed to reduce client lag by hiding the contents of signs that are too far away
+
+author: Schmoller
+
+version: 1.0.0
+
+main: au.com.addstar.signhider.SignHiderPlugin
+
+depend: [ProtocolLib]
