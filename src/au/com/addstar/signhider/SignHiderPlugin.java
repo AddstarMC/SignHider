@@ -89,6 +89,7 @@ public class SignHiderPlugin extends JavaPlugin
 	{
 		saveDefaultConfig();
 		
+		reloadConfig();
 		FileConfiguration config = getConfig();
 		
 		disabledWorldNames = config.getStringList("disabledWorlds");
