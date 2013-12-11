@@ -117,6 +117,7 @@ public class SignHiderPlugin extends JavaPlugin
 	@Override
 	public void onEnable()
 	{
+		getDataFolder().mkdirs();
 		instance = this;
 		try
 		{
