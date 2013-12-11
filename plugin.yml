@@ -8,3 +8,13 @@ version: 1.0.0
 main: au.com.addstar.signhider.SignHiderPlugin
 
 depend: [ProtocolLib]
+softdepend: [Orebfuscator]
+
+permissions:
+  signhider.reload:
+    default: op
+  
+commands:
+  signhider:
+    permission: signhider.reload
+    usage: /<command> reload 

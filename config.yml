@@ -1,0 +1,9 @@
+
+# A list of the worlds this is disabled in. eg. disabledWorlds: [world, creative]
+disabledWorlds: []
+
+# The distance in blocks signs can be sign from
+maxSignRange: 20
+
+# The distance in blocks sign text can be seen from. This cannot be greater or equal to maxSignRange
+textRange: 10 

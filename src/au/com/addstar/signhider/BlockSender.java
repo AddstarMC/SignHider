@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -40,13 +41,18 @@ public class BlockSender
 	}
 	public void add(BlockVector location, int material, int data)
 	{
-		Chunk chunk = mPlayer.getWorld().getChunkAt(location.getBlockX() >> 4, location.getBlockZ() >> 4);
+		add(location.getBlockX(), location.getBlockY(), location.getBlockZ(), material, data);
+	}
+	
+	public void add(int x, int y, int z, int material, int data)
+	{
+		Chunk chunk = mPlayer.getWorld().getChunkAt(x >> 4, z >> 4);
 		if(!mChunks.containsKey(chunk))
 			mChunks.put(chunk, new OutputSet());
 		
 		OutputSet output = mChunks.get(chunk);
 		
-		short locPart = (short)((location.getBlockX() & 0xF) << 12 | (location.getBlockZ() & 0xF) << 8 | (location.getBlockY() & 0xFF));
+		short locPart = (short)((x & 0xF) << 12 | (z & 0xF) << 8 | (y & 0xFF));
 		short dataPart = (short)((material & 4095) << 4 | (data & 0xF));
 		
 		try
@@ -97,6 +103,44 @@ public class BlockSender
 		{
 			e.printStackTrace();
 		}
+		
+		mPlayer = null;
+		mChunks.clear();
+		mChunks = null;
+	}
+	
+	public void endWithDelay()
+	{
+		final LinkedList<PacketContainer> packets = new LinkedList<PacketContainer>();
+		final Player player = mPlayer; 
+		
+		for(Entry<Chunk, OutputSet> entry : mChunks.entrySet())
+		{
+			PacketContainer packet = new PacketContainer(Packets.Server.MULTI_BLOCK_CHANGE);
+			SignHiderPlugin.setChunkCoord(packet, entry.getKey().getX(), entry.getKey().getZ());
+			packet.getIntegers().write(0, entry.getValue().blockCount);
+			packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
+			
+			packets.add(packet);
+		}
+
+		packets.addAll(mTilePackets);
+		
+		Bukkit.getScheduler().runTask(SignHiderPlugin.instance, new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					for(PacketContainer packet : packets)
+						ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+				}
+				catch(InvocationTargetException e)
+				{
+				}
+			}
+		});
 		
 		mPlayer = null;
 		mChunks.clear();

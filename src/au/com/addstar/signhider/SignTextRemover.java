@@ -63,14 +63,11 @@ public class SignTextRemover extends PacketAdapter
 		return true;
 	}
 	
-	private boolean cleanBulkMapChunk(Player player, PacketContainer packet)
+	protected boolean cleanBulkMapChunk(Player player, PacketContainer packet)
 	{
 		byte[][] buffers = packet.getSpecificModifier(byte[][].class).read(0);
 		if(buffers == null)
-		{
-			System.out.println("Inflated buffers null!");
 			return true;
-		}
 
 		int[] x = packet.getIntegerArrays().read(0);
 		int[] z = packet.getIntegerArrays().read(1);
@@ -158,6 +155,9 @@ public class SignTextRemover extends PacketAdapter
 	@Override
 	public void onPacketSending( PacketEvent event )
 	{
+		if(!SignHiderPlugin.isEnabledInWorld(event.getPlayer().getWorld()))
+			return;
+		
 		switch(event.getPacketID())
 		{
 		case Packets.Server.UPDATE_SIGN:

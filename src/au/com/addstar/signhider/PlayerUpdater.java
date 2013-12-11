@@ -28,6 +28,9 @@ public class PlayerUpdater implements Listener
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled=true)
 	private void onPlayerMove(PlayerMoveEvent event)
 	{
+		if(!SignHiderPlugin.isEnabledInWorld(event.getPlayer().getWorld()))
+			return;
+		
 		if((event.getFrom().getBlockX() / SignHiderPlugin.updateFreq != event.getTo().getBlockX() / SignHiderPlugin.updateFreq) ||
 				(event.getFrom().getBlockZ() / SignHiderPlugin.updateFreq != event.getTo().getBlockZ() / SignHiderPlugin.updateFreq) ||
 				(event.getFrom().getBlockY() / SignHiderPlugin.updateFreq != event.getTo().getBlockY() / SignHiderPlugin.updateFreq))
@@ -39,6 +42,9 @@ public class PlayerUpdater implements Listener
 	{
 		mActiveSigns.remove(event.getPlayer());
 		mActiveText.remove(event.getPlayer());
+		
+		if(!SignHiderPlugin.isEnabledInWorld(event.getPlayer().getWorld()))
+			return;
 		
 		onPlayerMove(event.getPlayer());
 	}
