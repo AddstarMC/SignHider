@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.block.Block;
@@ -46,11 +47,17 @@ public class BlockSender
 	
 	public void add(int x, int y, int z, int material, int data)
 	{
+		Validate.notNull(mPlayer);
+		Validate.notNull(mPlayer.getWorld());
 		Chunk chunk = mPlayer.getWorld().getChunkAt(x >> 4, z >> 4);
-		if(!mChunks.containsKey(chunk))
-			mChunks.put(chunk, new OutputSet());
 		
 		OutputSet output = mChunks.get(chunk);
+		
+		if(output == null)
+		{
+			output = new OutputSet();
+			mChunks.put(chunk, output);
+		}
 		
 		short locPart = (short)((x & 0xF) << 12 | (z & 0xF) << 8 | (y & 0xFF));
 		short dataPart = (short)((material & 4095) << 4 | (data & 0xF));

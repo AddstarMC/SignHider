@@ -20,6 +20,9 @@ public class OrebfuscatorSignRemover extends SignTextRemover
 	@Override
 	protected boolean cleanBulkMapChunk( Player player, PacketContainer packet )
 	{
+		if(player == null)
+			return true;
+		
 		byte[][] buffers = packet.getSpecificModifier(byte[][].class).read(0);
 		
 		if(buffers != null)
