@@ -17,6 +17,8 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.BlockVector;
 
+import au.com.addstar.signhider.SignHiderPlugin.Setting;
+
 public class PlayerUpdater implements Listener
 {
 	private WeakHashMap<Player, HashSet<BlockVector>> mActiveSigns = new WeakHashMap<Player, HashSet<BlockVector>>();
@@ -100,11 +102,12 @@ public class PlayerUpdater implements Listener
 		}
 	
 		player.getLocation(mLoc);
+		Setting settings = SignHiderPlugin.getWorldSettings(player.getWorld());
 		
 		// Find new ones
-		for(int x = (mLoc.getBlockX() >> 4) - SignHiderPlugin.chunkRange; x <= (mLoc.getBlockX() >> 4) + SignHiderPlugin.chunkRange; ++x)
+		for(int x = (mLoc.getBlockX() >> 4) - settings.chunkRange; x <= (mLoc.getBlockX() >> 4) + settings.chunkRange; ++x)
 		{
-			for(int z = (mLoc.getBlockZ() >> 4) - SignHiderPlugin.chunkRange; z <= (mLoc.getBlockZ() >> 4) + SignHiderPlugin.chunkRange; ++z)
+			for(int z = (mLoc.getBlockZ() >> 4) - settings.chunkRange; z <= (mLoc.getBlockZ() >> 4) + settings.chunkRange; ++z)
 			{
 				Chunk chunk = player.getWorld().getChunkAt(x, z);
 				for(BlockState tile : chunk.getTileEntities())

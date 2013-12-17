@@ -2,6 +2,7 @@ package au.com.addstar.signhider;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -11,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,9 +26,9 @@ public class SignHiderPlugin extends JavaPlugin
 {
 	private ProtocolManager mManager;
 	
-	public static int chunkRange = 2;
-	public static int signRange = 400;
-	public static int textRange = 100;
+	private static Setting mDefaultSetting;
+	private static HashMap<String, Setting> mWorldSettings = new HashMap<String, Setting>();
+	
 	
 	public static int updateFreq = 4;
 	
@@ -40,15 +42,25 @@ public class SignHiderPlugin extends JavaPlugin
 		return !disabledWorlds.containsKey(world);
 	}
 	
+	public static Setting getWorldSettings(World world)
+	{
+		Setting setting = mWorldSettings.get(world.getName().toLowerCase());
+		if(setting == null)
+			setting = mDefaultSetting;
+		
+		return setting;
+	}
+	
 	public static boolean canSee(Player player, int x, int y, int z, boolean text)
 	{
 		Location loc = player.getLocation();
 		int dist = ((loc.getBlockX() - x) * (loc.getBlockX() - x)) + ((loc.getBlockY() - y) * (loc.getBlockY() - y)) + ((loc.getBlockZ() - z) * (loc.getBlockZ() - z));
+		Setting setting = getWorldSettings(player.getWorld());
 		
 		if(text)
-			return dist < SignHiderPlugin.textRange;
+			return dist < setting.textRange;
 		else
-			return dist < SignHiderPlugin.signRange;
+			return dist < setting.signRange;
 	}
 	
 	private static Class<Object> mChunkCoordClass;
@@ -95,6 +107,7 @@ public class SignHiderPlugin extends JavaPlugin
 		disabledWorldNames = config.getStringList("disabledWorlds");
 		
 		disabledWorlds.clear();
+		mWorldSettings.clear();
 		for(String name : disabledWorldNames)
 		{
 			World world = Bukkit.getWorld(name);
@@ -108,9 +121,33 @@ public class SignHiderPlugin extends JavaPlugin
 		if(text >= sign)
 			text = sign - 1;
 		
-		chunkRange = (sign >> 4) + 1;
-		signRange = sign * sign;
-		textRange = text * text;
+		mDefaultSetting = new Setting();
+		
+		mDefaultSetting.chunkRange = (sign >> 4) + 1;
+		mDefaultSetting.signRange = sign * sign;
+		mDefaultSetting.textRange = text * text;
+		
+		// Load world settings
+		if(config.isConfigurationSection("worldSettings"))
+		{
+			ConfigurationSection worlds = config.getConfigurationSection("worldSettings");
+			for(String worldName : worlds.getKeys(false))
+			{
+				ConfigurationSection world = worlds.getConfigurationSection(worldName);
+				
+				Setting settings = new Setting();
+				sign = world.getInt("maxSignRange", 20);
+				text = world.getInt("textRange", 10);
+				
+				if(text >= sign)
+					text = sign - 1;
+				
+				settings.chunkRange = (sign >> 4) + 1;
+				settings.signRange = sign * sign;
+				settings.textRange = text * text;
+				mWorldSettings.put(worldName.toLowerCase(), settings);
+			}
+		}
 	}
 	
 	@SuppressWarnings( "unchecked" )
@@ -166,5 +203,12 @@ public class SignHiderPlugin extends JavaPlugin
 		}
 		
 		return false;
+	}
+	
+	public static class Setting
+	{
+		public int chunkRange = 2;
+		public int signRange = 400;
+		public int textRange = 100;
 	}
 }

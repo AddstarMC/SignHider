@@ -7,3 +7,10 @@ maxSignRange: 20
 
 # The distance in blocks sign text can be seen from. This cannot be greater or equal to maxSignRange
 textRange: 10 
+
+# Per world settings. Example below
+worldSettings:
+#  world:
+#    maxSignRange: 40
+#    textRange: 15
+     
