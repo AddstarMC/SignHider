@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.WeakHashMap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -15,6 +16,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.util.BlockVector;
 
 import au.com.addstar.signhider.SignHiderPlugin.Setting;
@@ -37,6 +40,32 @@ public class PlayerUpdater implements Listener
 				(event.getFrom().getBlockZ() / SignHiderPlugin.updateFreq != event.getTo().getBlockZ() / SignHiderPlugin.updateFreq) ||
 				(event.getFrom().getBlockY() / SignHiderPlugin.updateFreq != event.getTo().getBlockY() / SignHiderPlugin.updateFreq))
 				onPlayerMove(event.getPlayer());
+	}
+	
+	@EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
+	private void onPlayerTeleport(final PlayerTeleportEvent event)
+	{
+		if(event.getCause() == TeleportCause.COMMAND || event.getCause() == TeleportCause.PLUGIN || event.getCause() == TeleportCause.ENDER_PEARL)
+		{
+			if(!event.getFrom().getWorld().equals(event.getTo().getWorld()))
+				return;
+			
+			Bukkit.getScheduler().runTaskLater(SignHiderPlugin.instance, new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					if(!SignHiderPlugin.isEnabledInWorld(event.getPlayer().getWorld()))
+						return;
+					
+					if(!mActiveSigns.containsKey(event.getPlayer()) || (event.getFrom().getBlockX() / SignHiderPlugin.updateFreq != event.getTo().getBlockX() / SignHiderPlugin.updateFreq) ||
+							(event.getFrom().getBlockZ() / SignHiderPlugin.updateFreq != event.getTo().getBlockZ() / SignHiderPlugin.updateFreq) ||
+							(event.getFrom().getBlockY() / SignHiderPlugin.updateFreq != event.getTo().getBlockY() / SignHiderPlugin.updateFreq))
+							onPlayerMove(event.getPlayer());
+				}
+			}, 1L);
+		}
+		
 	}
 	
 	@EventHandler(priority=EventPriority.NORMAL, ignoreCancelled=true)
