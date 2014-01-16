@@ -34,12 +34,13 @@ public class SignHiderPlugin extends JavaPlugin
 	
 	public static SignHiderPlugin instance;
 	
+	private static boolean invertWorlds;
 	private static List<String> disabledWorldNames;
 	private static WeakHashMap<World, Void> disabledWorlds = new WeakHashMap<World, Void>();
 	
 	public static boolean isEnabledInWorld(World world)
 	{
-		return !disabledWorlds.containsKey(world);
+		return (invertWorlds ? disabledWorlds.containsKey(world) : !disabledWorlds.containsKey(world));
 	}
 	
 	public static Setting getWorldSettings(World world)
@@ -105,6 +106,7 @@ public class SignHiderPlugin extends JavaPlugin
 		FileConfiguration config = getConfig();
 		
 		disabledWorldNames = config.getStringList("disabledWorlds");
+		invertWorlds = config.getBoolean("invert", false);
 		
 		disabledWorlds.clear();
 		mWorldSettings.clear();

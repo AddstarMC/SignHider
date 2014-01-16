@@ -2,6 +2,9 @@
 # A list of the worlds this is disabled in. eg. disabledWorlds: [world, creative]
 disabledWorlds: []
 
+# When true, disabledWorlds becomes a list of worlds to enable in
+invert: false
+
 # The distance in blocks signs can be sign from
 maxSignRange: 20
 
