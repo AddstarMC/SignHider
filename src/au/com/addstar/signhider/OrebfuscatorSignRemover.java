@@ -31,18 +31,24 @@ public class OrebfuscatorSignRemover extends SignTextRemover
 		int[] x = packet.getIntegerArrays().read(0);
 		int[] z = packet.getIntegerArrays().read(1);
 		
-		mSender.begin(player);
-		for(int i = 0; i < x.length; ++i)
+		synchronized(mSender)
 		{
-			Chunk chunk = player.getWorld().getChunkAt(x[i], z[i]);
-			for(BlockState tile : chunk.getTileEntities())
+			mSender.begin(player);
+			for(int i = 0; i < x.length; ++i)
 			{
-				if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
-					mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
+				if(player.getWorld().isChunkLoaded(x[i], z[i]))
+				{
+					Chunk chunk = player.getWorld().getChunkAt(x[i], z[i]);
+					for(BlockState tile : chunk.getTileEntities())
+					{
+						if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
+							mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
+					}
+				}
 			}
+	
+			mSender.endWithDelay();
 		}
-
-		mSender.endWithDelay();
 
 		return true;
 	}
