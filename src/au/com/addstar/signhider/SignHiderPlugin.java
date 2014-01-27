@@ -174,10 +174,7 @@ public class SignHiderPlugin extends JavaPlugin
 		loadConfig();
 		
 		mManager = ProtocolLibrary.getProtocolManager();
-		if(Bukkit.getPluginManager().isPluginEnabled("Orebfuscator"))
-			mManager.addPacketListener(new OrebfuscatorSignRemover(this));
-		else
-			mManager.addPacketListener(new SignTextRemover(this));
+		mManager.addPacketListener(new SignTextRemover(this));
 		
 		Bukkit.getPluginManager().registerEvents(new PlayerUpdater(), this);
 	}

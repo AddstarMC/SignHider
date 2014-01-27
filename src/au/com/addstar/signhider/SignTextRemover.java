@@ -5,9 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.zip.Deflater;
-
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
@@ -24,6 +21,8 @@ import com.comphenix.protocol.events.PacketEvent;
 
 public class SignTextRemover extends PacketAdapter
 {
+	private BlockSender mSender = new BlockSender();
+	
 	public SignTextRemover(Plugin plugin)
 	{
 		super(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.LOWEST, Packets.Server.UPDATE_SIGN, Packets.Server.MAP_CHUNK, Packets.Server.MAP_CHUNK_BULK, Packets.Server.MULTI_BLOCK_CHANGE);
@@ -34,64 +33,61 @@ public class SignTextRemover extends PacketAdapter
 		return SignHiderPlugin.canSee(player, packet.getIntegers().read(0), packet.getIntegers().read(1), packet.getIntegers().read(2), true);
 	}
 	
-	private void removeTileEntities(RawChunk raw, Chunk chunk, Player player)
-	{
-		for(BlockState tile : chunk.getTileEntities())
-		{
-			if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
-				raw.setBlockId(tile.getX() & 0xF, tile.getY(), tile.getZ() & 0xF, 0);
-		}
-	}
-	
 	private boolean cleanMapChunk(Player player, PacketContainer packet)
 	{
 		int x = packet.getIntegers().read(0);
 		int z = packet.getIntegers().read(1);
 		
-		Chunk chunk = player.getWorld().getChunkAt(x,z);
-		removeTileEntities(new RawChunk(packet.getByteArrays().read(1), packet.getIntegers().read(2), packet.getIntegers().read(3)), chunk, player);
+		int minY = packet.getIntegers().read(2);
+		int maxY = packet.getIntegers().read(3);
+		if (minY == maxY && minY == 0)
+			return true;
 		
-		Deflater deflater = new Deflater(-1);
-		deflater.setInput(packet.getByteArrays().read(1));
-		deflater.finish();
-		byte[] buffer = new byte[packet.getByteArrays().read(1).length];
-		deflater.deflate(buffer);
-		packet.getByteArrays().write(0, buffer);
-		packet.getIntegers().write(4, buffer.length);
-		deflater.end();
+		synchronized(mSender)
+		{
+			mSender.begin(player);
+			if(player.getWorld().isChunkLoaded(x, z))
+			{
+				Chunk chunk = player.getWorld().getChunkAt(x, z);
+				for(BlockState tile : chunk.getTileEntities())
+				{
+					if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
+						mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
+				}
+			}
+	
+			mSender.endWithDelay();
+		}
 		
 		return true;
 	}
 	
 	protected boolean cleanBulkMapChunk(Player player, PacketContainer packet)
 	{
-		byte[][] buffers = packet.getSpecificModifier(byte[][].class).read(0);
-		if(buffers == null)
+		if(player == null)
 			return true;
-
+		
 		int[] x = packet.getIntegerArrays().read(0);
 		int[] z = packet.getIntegerArrays().read(1);
-		int[] chunkData = packet.getIntegerArrays().read(2);
-		int[] biomeData = packet.getIntegerArrays().read(3);
+		
+		synchronized(mSender)
+		{
+			mSender.begin(player);
+			for(int i = 0; i < x.length; ++i)
+			{
+				if(player.getWorld().isChunkLoaded(x[i], z[i]))
+				{
+					Chunk chunk = player.getWorld().getChunkAt(x[i], z[i]);
+					for(BlockState tile : chunk.getTileEntities())
+					{
+						if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
+							mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
+					}
+				}
+			}
+			mSender.endWithDelay();
+		}
 
-		for(int i = 0; i < x.length; ++i)
-		{
-			Chunk chunk = player.getWorld().getChunkAt(x[i],z[i]);
-			removeTileEntities(new RawChunk(buffers[i], chunkData[i], biomeData[i]), chunk, player);
-		}
-		
-		byte[] buildBuffer = new byte[0];
-		int start = 0;
-		for(int i = 0; i < x.length; ++i)
-		{
-			if(buildBuffer.length < start + buffers[i].length)
-				buildBuffer = Arrays.copyOf(buildBuffer, start + buffers[i].length);
-			
-			System.arraycopy(buffers[i], 0, buildBuffer, start, buffers[i].length);
-			start += buffers[i].length;
-		}
-		packet.getByteArrays().write(1, buildBuffer);
-		
 		return true;
 	}
 	
