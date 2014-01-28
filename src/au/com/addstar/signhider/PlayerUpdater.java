@@ -138,23 +138,26 @@ public class PlayerUpdater implements Listener
 		{
 			for(int z = (mLoc.getBlockZ() >> 4) - settings.chunkRange; z <= (mLoc.getBlockZ() >> 4) + settings.chunkRange; ++z)
 			{
-				Chunk chunk = player.getWorld().getChunkAt(x, z);
-				for(BlockState tile : chunk.getTileEntities())
+				if(player.getWorld().isChunkLoaded(x, z))
 				{
-					if(!(tile instanceof Sign))
-						continue;
-					
-					if(SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
+					Chunk chunk = player.getWorld().getChunkAt(x, z);
+					for(BlockState tile : chunk.getTileEntities())
 					{
-						BlockVector loc = new BlockVector(tile.getX(), tile.getY(), tile.getZ());
-						if(nearby.add(loc))
+						if(!(tile instanceof Sign))
+							continue;
+						
+						if(SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
 						{
-							mSender.add(loc, tile.getTypeId(), tile.getData().getData());
-							
-							if(SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), true))
+							BlockVector loc = new BlockVector(tile.getX(), tile.getY(), tile.getZ());
+							if(nearby.add(loc))
 							{
-								mSender.setText(loc, ((Sign)tile).getLines());
-								nearbyText.add(loc);
+								mSender.add(loc, tile.getTypeId(), tile.getData().getData());
+								
+								if(SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), true))
+								{
+									mSender.setText(loc, ((Sign)tile).getLines());
+									nearbyText.add(loc);
+								}
 							}
 						}
 					}
