@@ -81,6 +81,11 @@ public class BlockSender
 		packet.getIntegers().write(1, location.getBlockY());
 		packet.getIntegers().write(2, location.getBlockZ());
 		
+		for(int i = 0; i < text.length; ++i)
+		{
+			if(text[i].length() > 15)
+				text[i] = text[i].substring(0, 15);
+		}
 		packet.getStringArrays().write(0, text);
 		
 		mTilePackets.add(packet);
