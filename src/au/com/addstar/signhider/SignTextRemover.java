@@ -12,12 +12,13 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import com.comphenix.protocol.Packets;
-import com.comphenix.protocol.events.ConnectionSide;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.PacketType.Play;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
 
 public class SignTextRemover extends PacketAdapter
 {
@@ -25,7 +26,7 @@ public class SignTextRemover extends PacketAdapter
 	
 	public SignTextRemover(Plugin plugin)
 	{
-		super(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.LOWEST, Packets.Server.UPDATE_SIGN, Packets.Server.MAP_CHUNK, Packets.Server.MAP_CHUNK_BULK, Packets.Server.MULTI_BLOCK_CHANGE);
+		super(plugin, ListenerPriority.LOWEST, PacketType.Play.Server.UPDATE_SIGN, PacketType.Play.Server.MAP_CHUNK, PacketType.Play.Server.MAP_CHUNK_BULK, PacketType.Play.Server.MULTI_BLOCK_CHANGE);
 	}
 	
 	private boolean canSeeSign(Player player, PacketContainer packet)
@@ -94,7 +95,7 @@ public class SignTextRemover extends PacketAdapter
 	@SuppressWarnings( "deprecation" )
 	private boolean cleanMultiChange(Player player, PacketContainer packet)
 	{
-		int[] coord = SignHiderPlugin.getChunkCoord(packet);
+		ChunkCoordIntPair coord = packet.getChunkCoordIntPairs().read(0);
 		byte[] data = packet.getByteArrays().read(0);
 		int count = packet.getIntegers().read(0);
 		
@@ -104,8 +105,8 @@ public class SignTextRemover extends PacketAdapter
 		DataOutputStream output = new DataOutputStream(stream);
 		int newCount = 0;
 		
-		int chunkX = coord[0] * 16;
-		int chunkZ = coord[1] * 16;
+		int chunkX = coord.getChunkX() * 16;
+		int chunkZ = coord.getChunkZ() * 16;
 
 		try
 		{
@@ -154,24 +155,25 @@ public class SignTextRemover extends PacketAdapter
 		if(!SignHiderPlugin.isEnabledInWorld(event.getPlayer().getWorld()))
 			return;
 		
-		switch(event.getPacketID())
+		if(event.getPacketType() == Play.Server.UPDATE_SIGN) 
 		{
-		case Packets.Server.UPDATE_SIGN:
 			if(!canSeeSign(event.getPlayer(), event.getPacket()))
 				event.setCancelled(true);
-			break;
-		case Packets.Server.MAP_CHUNK:
+		}
+		else if(event.getPacketType() == Play.Server.MAP_CHUNK)
+		{
 			if(!cleanMapChunk(event.getPlayer(), event.getPacket()))
 				event.setCancelled(true);
-			break;
-		case Packets.Server.MAP_CHUNK_BULK:
+		}
+		else if(event.getPacketType() == Play.Server.MAP_CHUNK_BULK)
+		{
 			if(!cleanBulkMapChunk(event.getPlayer(), event.getPacket()))
 				event.setCancelled(true);
-			break;
-		case Packets.Server.MULTI_BLOCK_CHANGE:
+		}
+		else if(event.getPacketType() == Play.Server.MULTI_BLOCK_CHANGE)
+		{
 			if(!cleanMultiChange(event.getPlayer(), event.getPacket()))
 				event.setCancelled(true);
-			break;
 		}
 	}
 }

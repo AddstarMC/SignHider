@@ -15,9 +15,10 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BlockVector;
 
-import com.comphenix.protocol.Packets;
+import com.comphenix.protocol.PacketType.Play;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
 
 public class BlockSender
 {
@@ -76,7 +77,7 @@ public class BlockSender
 	
 	public void setText(BlockVector location, String[] text)
 	{
-		PacketContainer packet = new PacketContainer(Packets.Server.UPDATE_SIGN);
+		PacketContainer packet = new PacketContainer(Play.Server.UPDATE_SIGN);
 		packet.getIntegers().write(0, location.getBlockX());
 		packet.getIntegers().write(1, location.getBlockY());
 		packet.getIntegers().write(2, location.getBlockZ());
@@ -97,11 +98,10 @@ public class BlockSender
 		{
 			for(Entry<Chunk, OutputSet> entry : mChunks.entrySet())
 			{
-				PacketContainer packet = new PacketContainer(Packets.Server.MULTI_BLOCK_CHANGE);
-				SignHiderPlugin.setChunkCoord(packet, entry.getKey().getX(), entry.getKey().getZ());
+				PacketContainer packet = new PacketContainer(Play.Server.MULTI_BLOCK_CHANGE);
+				packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 				packet.getIntegers().write(0, entry.getValue().blockCount);
 				packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
-				
 				
 				ProtocolLibrary.getProtocolManager().sendServerPacket(mPlayer, packet, false);
 			}
@@ -128,8 +128,8 @@ public class BlockSender
 		
 		for(Entry<Chunk, OutputSet> entry : mChunks.entrySet())
 		{
-			PacketContainer packet = new PacketContainer(Packets.Server.MULTI_BLOCK_CHANGE);
-			SignHiderPlugin.setChunkCoord(packet, entry.getKey().getX(), entry.getKey().getZ());
+			PacketContainer packet = new PacketContainer(Play.Server.MULTI_BLOCK_CHANGE);
+			packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 			packet.getIntegers().write(0, entry.getValue().blockCount);
 			packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
 			

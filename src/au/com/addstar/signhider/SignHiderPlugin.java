@@ -1,7 +1,5 @@
 package au.com.addstar.signhider;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.WeakHashMap;
@@ -19,8 +17,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketContainer;
-import com.google.common.base.Throwables;
 
 public class SignHiderPlugin extends JavaPlugin
 {
@@ -62,40 +58,6 @@ public class SignHiderPlugin extends JavaPlugin
 			return dist < setting.textRange;
 		else
 			return dist < setting.signRange;
-	}
-	
-	private static Class<Object> mChunkCoordClass;
-	private static Constructor<Object> mChunkCoordConstructor;
-	private static Field mChunkCoordX;
-	private static Field mChunkCoordZ;
-	
-	public static int[] getChunkCoord(PacketContainer packet)
-	{
-		Object obj = packet.getSpecificModifier(mChunkCoordClass).read(0);
-		
-		try
-		{
-			return new int[] {(Integer)mChunkCoordX.get(obj), (Integer)mChunkCoordZ.get(obj)}; 
-		}
-		catch(Exception e)
-		{
-			Throwables.propagateIfPossible(e);
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public static void setChunkCoord(PacketContainer packet, int x, int z)
-	{
-		try
-		{
-			Object obj = mChunkCoordConstructor.newInstance(x, z);
-			packet.getSpecificModifier(mChunkCoordClass).write(0, obj);
-		}
-		catch(Exception e)
-		{
-			Throwables.propagateIfPossible(e);
-			throw new RuntimeException(e);
-		}
 	}
 	
 	private void loadConfig()
@@ -152,24 +114,11 @@ public class SignHiderPlugin extends JavaPlugin
 		}
 	}
 	
-	@SuppressWarnings( "unchecked" )
 	@Override
 	public void onEnable()
 	{
 		getDataFolder().mkdirs();
 		instance = this;
-		try
-		{
-			mChunkCoordClass = (Class<Object>)Class.forName("net.minecraft.server.v1_7_R1.ChunkCoordIntPair");
-			mChunkCoordX = mChunkCoordClass.getField("x");
-			mChunkCoordZ = mChunkCoordClass.getField("z");
-			mChunkCoordConstructor = mChunkCoordClass.getConstructor(int.class, int.class);
-		}
-		catch(Exception e)
-		{
-			Throwables.propagateIfPossible(e);
-			throw new RuntimeException(e);
-		}
 		
 		loadConfig();
 		
