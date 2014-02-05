@@ -13,12 +13,15 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 
-public class SignHiderPlugin extends JavaPlugin
+public class SignHiderPlugin extends JavaPlugin implements Listener
 {
 	private ProtocolManager mManager;
 	
@@ -126,6 +129,7 @@ public class SignHiderPlugin extends JavaPlugin
 		mManager.addPacketListener(new SignTextRemover(this));
 		
 		Bukkit.getPluginManager().registerEvents(new PlayerUpdater(), this);
+		Bukkit.getPluginManager().registerEvents(this, this);
 	}
 	
 	@Override
@@ -151,6 +155,13 @@ public class SignHiderPlugin extends JavaPlugin
 		}
 		
 		return false;
+	}
+	
+	@EventHandler
+	private void onWorldLoad(WorldLoadEvent event)
+	{
+		if(disabledWorldNames.contains(event.getWorld().getName()))
+			disabledWorlds.put(event.getWorld(), null);
 	}
 	
 	public static class Setting
