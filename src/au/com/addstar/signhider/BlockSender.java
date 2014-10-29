@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
@@ -61,12 +62,15 @@ public class BlockSender
 		}
 		
 		short locPart = (short)((x & 0xF) << 12 | (z & 0xF) << 8 | (y & 0xFF));
-		short dataPart = (short)((material & 4095) << 4 | (data & 0xF));
+		int dataPart = ((material & 0xFFF) << 4 | (data & 0xF));
 		
 		try
 		{
 			output.output.writeShort(locPart);
 			output.output.writeShort(dataPart);
+			output.locations.add(locPart);
+			output.ids.add(dataPart);
+			
 			++output.blockCount;
 		}
 		catch(IOException e)
@@ -102,7 +106,8 @@ public class BlockSender
 				packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 				packet.getIntegers().write(0, entry.getValue().blockCount);
 				packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
-				
+				packet.getIntegerArrays().write(0, entry.getValue().getBlockIds());
+				packet.getSpecificModifier(short[].class).write(0, entry.getValue().getLocations());
 				ProtocolLibrary.getProtocolManager().sendServerPacket(mPlayer, packet, false);
 			}
 			
@@ -132,6 +137,8 @@ public class BlockSender
 			packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 			packet.getIntegers().write(0, entry.getValue().blockCount);
 			packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
+			packet.getIntegerArrays().write(0, entry.getValue().getBlockIds());
+			packet.getSpecificModifier(short[].class).write(0, entry.getValue().getLocations());
 			
 			packets.add(packet);
 		}
@@ -166,10 +173,32 @@ public class BlockSender
 			blockCount = 0;
 			stream = new ByteArrayOutputStream();
 			output = new DataOutputStream(stream);
+			locations = new ArrayList<Short>();
+			ids = new ArrayList<Integer>();
 		}
 		
 		public int blockCount;
 		public DataOutputStream output;
 		public ByteArrayOutputStream stream;
+		
+		// For 1.8
+		public ArrayList<Short> locations;
+		public ArrayList<Integer> ids;
+		
+		public short[] getLocations()
+		{
+			short[] locs = new short[locations.size()];
+			for(int i = 0; i < locations.size(); ++i)
+				locs[i] = locations.get(i);
+			return locs;
+		}
+		
+		public int[] getBlockIds()
+		{
+			int[] blockIds = new int[ids.size()];
+			for(int i = 0; i < ids.size(); ++i)
+				blockIds[i] = ids.get(i);
+			return blockIds;
+		}
 	}
 }

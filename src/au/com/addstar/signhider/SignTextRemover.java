@@ -1,10 +1,9 @@
 package au.com.addstar.signhider;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
@@ -92,18 +91,35 @@ public class SignTextRemover extends PacketAdapter
 		return true;
 	}
 	
+	public short[] toShortArray(ArrayList<Short> list)
+	{
+		short[] array = new short[list.size()];
+		for(int i = 0; i < list.size(); ++i)
+			array[i] = list.get(i);
+		return array;
+	}
+	
+	public int[] toIntArray(ArrayList<Integer> list)
+	{
+		int[] array = new int[list.size()];
+		for(int i = 0; i < list.size(); ++i)
+			array[i] = list.get(i);
+		return array;
+	}
+	
 	@SuppressWarnings( "deprecation" )
 	private boolean cleanMultiChange(Player player, PacketContainer packet)
 	{
 		ChunkCoordIntPair coord = packet.getChunkCoordIntPairs().read(0);
-		byte[] data = packet.getByteArrays().read(0);
 		int count = packet.getIntegers().read(0);
-		
-		DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
+		short[] locs = packet.getSpecificModifier(short[].class).read(0);
+		int[] ids = packet.getIntegerArrays().read(0);
 		
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		DataOutputStream output = new DataOutputStream(stream);
 		int newCount = 0;
+		ArrayList<Short> newLocs = new ArrayList<Short>();
+		ArrayList<Integer> newIds = new ArrayList<Integer>();
 		
 		int chunkX = coord.getChunkX() * 16;
 		int chunkZ = coord.getChunkZ() * 16;
@@ -112,15 +128,17 @@ public class SignTextRemover extends PacketAdapter
 		{
 			for(int i = 0; i < count; ++i)
 			{
-				short loc = input.readShort();
-				short id = input.readShort();
+				short loc = locs[i];
+				int id = ids[i];
 				
-				int blockId = (id >> 4) & 4095;
+				int blockId = (id >> 4) & 0xFFF;
 				
 				if(Material.getMaterial(blockId) != Material.SIGN_POST && Material.getMaterial(blockId) != Material.WALL_SIGN)
 				{
 					output.writeShort(loc);
 					output.writeShort(id);
+					newLocs.add(loc);
+					newIds.add(blockId);
 					++newCount;
 				}
 				else
@@ -129,6 +147,8 @@ public class SignTextRemover extends PacketAdapter
 					{
 						output.writeShort(loc);
 						output.writeShort(id);
+						newLocs.add(loc);
+						newIds.add(blockId);
 						++newCount;
 					}
 				}
@@ -140,6 +160,8 @@ public class SignTextRemover extends PacketAdapter
 			{
 				packet.getIntegers().write(0, newCount);
 				packet.getByteArrays().write(0, stream.toByteArray());
+				packet.getIntegerArrays().write(0, toIntArray(newIds));
+				packet.getSpecificModifier(short[].class).write(0, toShortArray(newLocs));
 			}
 		}
 		catch(IOException e)
