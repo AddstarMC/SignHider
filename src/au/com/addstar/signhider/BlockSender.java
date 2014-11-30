@@ -1,13 +1,14 @@
 package au.com.addstar.signhider;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+
+import net.minecraft.server.v1_8_R1.MultiBlockChangeInfo;
+import net.minecraft.server.v1_8_R1.PacketPlayOutMultiBlockChange;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
@@ -19,10 +20,13 @@ import org.bukkit.util.BlockVector;
 import com.comphenix.protocol.PacketType.Play;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 
 public class BlockSender
 {
+	private static Class<?> mChatComponentType;
 	private Player mPlayer;
 	private HashMap<Chunk, OutputSet> mChunks;
 	
@@ -51,6 +55,7 @@ public class BlockSender
 	{
 		Validate.notNull(mPlayer);
 		Validate.notNull(mPlayer.getWorld());
+		
 		Chunk chunk = mPlayer.getWorld().getChunkAt(x >> 4, z >> 4);
 		
 		OutputSet output = mChunks.get(chunk);
@@ -62,37 +67,31 @@ public class BlockSender
 		}
 		
 		short locPart = (short)((x & 0xF) << 12 | (z & 0xF) << 8 | (y & 0xFF));
-		int dataPart = ((material & 0xFFF) << 4 | (data & 0xF));
+		int dataPart = ((material & 0xFFF) | (data & 0xF) << 12);
 		
-		try
-		{
-			output.output.writeShort(locPart);
-			output.output.writeShort(dataPart);
-			output.locations.add(locPart);
-			output.ids.add(dataPart);
-			
-			++output.blockCount;
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-		}
+		output.locations.add(locPart);
+		output.ids.add(dataPart);
 	}
 	
+	@SuppressWarnings( "unchecked" )
 	public void setText(BlockVector location, String[] text)
 	{
+		if (mChatComponentType == null)
+			mChatComponentType = WrappedChatComponent.fromText("").getHandleType();
+		
 		PacketContainer packet = new PacketContainer(Play.Server.UPDATE_SIGN);
-		packet.getIntegers().write(0, location.getBlockX());
-		packet.getIntegers().write(1, location.getBlockY());
-		packet.getIntegers().write(2, location.getBlockZ());
-		
-		for(int i = 0; i < text.length; ++i)
+		packet.getBlockPositionModifier().write(0, new BlockPosition(location));
+		Object lines = Array.newInstance(mChatComponentType, 4);
+
+		for (int i = 0; i < 4; ++i)
 		{
-			if(text[i].length() > 15)
-				text[i] = text[i].substring(0, 15);
+			if (i < text.length)
+				Array.set(lines, i, WrappedChatComponent.fromText(text[i]).getHandle());
+			else
+				Array.set(lines, i, WrappedChatComponent.fromText("").getHandle());
 		}
-		packet.getStringArrays().write(0, text);
 		
+		packet.getSpecificModifier((Class<Object>)lines.getClass()).write(0, lines);
 		mTilePackets.add(packet);
 	}
 	
@@ -103,11 +102,13 @@ public class BlockSender
 			for(Entry<Chunk, OutputSet> entry : mChunks.entrySet())
 			{
 				PacketContainer packet = new PacketContainer(Play.Server.MULTI_BLOCK_CHANGE);
+				
 				packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
-				packet.getIntegers().write(0, entry.getValue().blockCount);
-				packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
-				packet.getIntegerArrays().write(0, entry.getValue().getBlockIds());
-				packet.getSpecificModifier(short[].class).write(0, entry.getValue().getLocations());
+				MultiBlockChangeInfo[] changes = new MultiBlockChangeInfo[entry.getValue().ids.size()];
+				for (int i = 0; i < changes.length; ++i)
+					changes[i] = new MultiBlockChangeInfo((PacketPlayOutMultiBlockChange)packet.getHandle(), entry.getValue().locations.get(i), net.minecraft.server.v1_8_R1.Block.getByCombinedId(entry.getValue().ids.get(i)));
+
+				packet.getSpecificModifier(MultiBlockChangeInfo[].class).write(0, changes);
 				ProtocolLibrary.getProtocolManager().sendServerPacket(mPlayer, packet, false);
 			}
 			
@@ -134,11 +135,13 @@ public class BlockSender
 		for(Entry<Chunk, OutputSet> entry : mChunks.entrySet())
 		{
 			PacketContainer packet = new PacketContainer(Play.Server.MULTI_BLOCK_CHANGE);
+			
 			packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
-			packet.getIntegers().write(0, entry.getValue().blockCount);
-			packet.getByteArrays().write(0, entry.getValue().stream.toByteArray());
-			packet.getIntegerArrays().write(0, entry.getValue().getBlockIds());
-			packet.getSpecificModifier(short[].class).write(0, entry.getValue().getLocations());
+			MultiBlockChangeInfo[] changes = new MultiBlockChangeInfo[entry.getValue().ids.size()];
+			for (int i = 0; i < changes.length; ++i)
+				changes[i] = new MultiBlockChangeInfo((PacketPlayOutMultiBlockChange)packet.getHandle(), entry.getValue().locations.get(i), net.minecraft.server.v1_8_R1.Block.getByCombinedId(entry.getValue().ids.get(i)));
+
+			packet.getSpecificModifier(MultiBlockChangeInfo[].class).write(0, changes);
 			
 			packets.add(packet);
 		}
@@ -170,35 +173,11 @@ public class BlockSender
 	{
 		public OutputSet()
 		{
-			blockCount = 0;
-			stream = new ByteArrayOutputStream();
-			output = new DataOutputStream(stream);
 			locations = new ArrayList<Short>();
 			ids = new ArrayList<Integer>();
 		}
 		
-		public int blockCount;
-		public DataOutputStream output;
-		public ByteArrayOutputStream stream;
-		
-		// For 1.8
 		public ArrayList<Short> locations;
 		public ArrayList<Integer> ids;
-		
-		public short[] getLocations()
-		{
-			short[] locs = new short[locations.size()];
-			for(int i = 0; i < locations.size(); ++i)
-				locs[i] = locations.get(i);
-			return locs;
-		}
-		
-		public int[] getBlockIds()
-		{
-			int[] blockIds = new int[ids.size()];
-			for(int i = 0; i < ids.size(); ++i)
-				blockIds[i] = ids.get(i);
-			return blockIds;
-		}
 	}
 }

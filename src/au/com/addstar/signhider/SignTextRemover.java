@@ -1,9 +1,11 @@
 package au.com.addstar.signhider;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
+
+import net.minecraft.server.v1_8_R1.Block;
+import net.minecraft.server.v1_8_R1.ChunkMap;
+import net.minecraft.server.v1_8_R1.IBlockData;
+import net.minecraft.server.v1_8_R1.MultiBlockChangeInfo;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
@@ -17,6 +19,7 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
 
 public class SignTextRemover extends PacketAdapter
@@ -30,7 +33,8 @@ public class SignTextRemover extends PacketAdapter
 	
 	private boolean canSeeSign(Player player, PacketContainer packet)
 	{
-		return SignHiderPlugin.canSee(player, packet.getIntegers().read(0), packet.getIntegers().read(1), packet.getIntegers().read(2), true);
+		BlockPosition pos = packet.getBlockPositionModifier().read(0);
+		return SignHiderPlugin.canSee(player, pos.getX(), pos.getY(), pos.getZ(), true);
 	}
 	
 	private boolean cleanMapChunk(Player player, PacketContainer packet)
@@ -38,9 +42,12 @@ public class SignTextRemover extends PacketAdapter
 		int x = packet.getIntegers().read(0);
 		int z = packet.getIntegers().read(1);
 		
-		int minY = packet.getIntegers().read(2);
-		int maxY = packet.getIntegers().read(3);
-		if (minY == maxY && minY == 0)
+		boolean full = packet.getBooleans().read(0);
+		
+		ChunkMap data = packet.getSpecificModifier(ChunkMap.class).read(0);
+		
+		// Chunk unload packet
+		if (full && data.b == 0)
 			return true;
 		
 		synchronized(mSender)
@@ -111,62 +118,37 @@ public class SignTextRemover extends PacketAdapter
 	private boolean cleanMultiChange(Player player, PacketContainer packet)
 	{
 		ChunkCoordIntPair coord = packet.getChunkCoordIntPairs().read(0);
-		int count = packet.getIntegers().read(0);
-		short[] locs = packet.getSpecificModifier(short[].class).read(0);
-		int[] ids = packet.getIntegerArrays().read(0);
+		MultiBlockChangeInfo[] changes = packet.getSpecificModifier(MultiBlockChangeInfo[].class).read(0);
 		
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		DataOutputStream output = new DataOutputStream(stream);
-		int newCount = 0;
-		ArrayList<Short> newLocs = new ArrayList<Short>();
-		ArrayList<Integer> newIds = new ArrayList<Integer>();
+		ArrayList<MultiBlockChangeInfo> newChanges = new ArrayList<MultiBlockChangeInfo>();
 		
 		int chunkX = coord.getChunkX() * 16;
 		int chunkZ = coord.getChunkZ() * 16;
 
-		try
+		for(int i = 0; i < changes.length; ++i)
 		{
-			for(int i = 0; i < count; ++i)
-			{
-				short loc = locs[i];
-				int id = ids[i];
-				
-				int blockId = (id >> 4) & 0xFFF;
-				
-				if(Material.getMaterial(blockId) != Material.SIGN_POST && Material.getMaterial(blockId) != Material.WALL_SIGN)
-				{
-					output.writeShort(loc);
-					output.writeShort(id);
-					newLocs.add(loc);
-					newIds.add(blockId);
-					++newCount;
-				}
-				else
-				{
-					if(SignHiderPlugin.canSee(player, (loc >> 12) & 0xF + chunkX, loc & 0xFF, (loc >> 8) & 0xF + chunkZ, false))
-					{
-						output.writeShort(loc);
-						output.writeShort(id);
-						newLocs.add(loc);
-						newIds.add(blockId);
-						++newCount;
-					}
-				}
-			}
+			short loc = changes[i].b();
+			IBlockData block = changes[i].c();
 			
-			if(newCount == 0)
-				return false;
-			else if(newCount != count)
+			int blockId = Block.getId(block.getBlock());
+			if(Material.getMaterial(blockId) != Material.SIGN_POST && Material.getMaterial(blockId) != Material.WALL_SIGN)
+				newChanges.add(changes[i]);
+			else
 			{
-				packet.getIntegers().write(0, newCount);
-				packet.getByteArrays().write(0, stream.toByteArray());
-				packet.getIntegerArrays().write(0, toIntArray(newIds));
-				packet.getSpecificModifier(short[].class).write(0, toShortArray(newLocs));
+				if(SignHiderPlugin.canSee(player, (loc >> 12) & 0xF + chunkX, loc & 0xFF, (loc >> 8) & 0xF + chunkZ, false))
+					newChanges.add(changes[i]);
 			}
 		}
-		catch(IOException e)
+		
+		if(newChanges.isEmpty())
+			return false;
+		else if(newChanges.size() != changes.length)
 		{
-			e.printStackTrace();
+			changes = new MultiBlockChangeInfo[newChanges.size()];
+			for (int i = 0; i < newChanges.size(); ++i)
+				changes[i] = newChanges.get(i);
+			
+			packet.getSpecificModifier(MultiBlockChangeInfo[].class).write(0, changes);
 		}
 		return true;
 	}

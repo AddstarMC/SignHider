@@ -141,6 +141,7 @@ public class PlayerUpdater implements Listener
 				if(player.getWorld().isChunkLoaded(x, z))
 				{
 					Chunk chunk = player.getWorld().getChunkAt(x, z);
+					
 					for(BlockState tile : chunk.getTileEntities())
 					{
 						if(!(tile instanceof Sign))
