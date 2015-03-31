@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
-import net.minecraft.server.v1_8_R1.MultiBlockChangeInfo;
-import net.minecraft.server.v1_8_R1.PacketPlayOutMultiBlockChange;
+import net.minecraft.server.v1_8_R2.PacketPlayOutMultiBlockChange;
+import net.minecraft.server.v1_8_R2.PacketPlayOutMultiBlockChange.MultiBlockChangeInfo;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
@@ -106,7 +106,7 @@ public class BlockSender
 				packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 				MultiBlockChangeInfo[] changes = new MultiBlockChangeInfo[entry.getValue().ids.size()];
 				for (int i = 0; i < changes.length; ++i)
-					changes[i] = new MultiBlockChangeInfo((PacketPlayOutMultiBlockChange)packet.getHandle(), entry.getValue().locations.get(i), net.minecraft.server.v1_8_R1.Block.getByCombinedId(entry.getValue().ids.get(i)));
+					changes[i] = ((PacketPlayOutMultiBlockChange)packet.getHandle()).new MultiBlockChangeInfo(entry.getValue().locations.get(i), net.minecraft.server.v1_8_R2.Block.getByCombinedId(entry.getValue().ids.get(i)));
 
 				packet.getSpecificModifier(MultiBlockChangeInfo[].class).write(0, changes);
 				ProtocolLibrary.getProtocolManager().sendServerPacket(mPlayer, packet, false);
@@ -139,7 +139,7 @@ public class BlockSender
 			packet.getChunkCoordIntPairs().write(0, new ChunkCoordIntPair(entry.getKey().getX(), entry.getKey().getZ()));
 			MultiBlockChangeInfo[] changes = new MultiBlockChangeInfo[entry.getValue().ids.size()];
 			for (int i = 0; i < changes.length; ++i)
-				changes[i] = new MultiBlockChangeInfo((PacketPlayOutMultiBlockChange)packet.getHandle(), entry.getValue().locations.get(i), net.minecraft.server.v1_8_R1.Block.getByCombinedId(entry.getValue().ids.get(i)));
+				changes[i] = ((PacketPlayOutMultiBlockChange)packet.getHandle()).new MultiBlockChangeInfo(entry.getValue().locations.get(i), net.minecraft.server.v1_8_R2.Block.getByCombinedId(entry.getValue().ids.get(i)));
 
 			packet.getSpecificModifier(MultiBlockChangeInfo[].class).write(0, changes);
 			
