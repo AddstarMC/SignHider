@@ -2,10 +2,10 @@ package au.com.addstar.signhider;
 
 import java.util.ArrayList;
 
-import net.minecraft.server.v1_8_R2.Block;
-import net.minecraft.server.v1_8_R2.IBlockData;
-import net.minecraft.server.v1_8_R2.PacketPlayOutMapChunk.ChunkMap;
-import net.minecraft.server.v1_8_R2.PacketPlayOutMultiBlockChange.MultiBlockChangeInfo;
+import net.minecraft.server.v1_8_R3.Block;
+import net.minecraft.server.v1_8_R3.IBlockData;
+import net.minecraft.server.v1_8_R3.PacketPlayOutMapChunk.ChunkMap;
+import net.minecraft.server.v1_8_R3.PacketPlayOutMultiBlockChange.MultiBlockChangeInfo;
 
 import org.bukkit.Chunk;
 import org.bukkit.Material;
