@@ -2,11 +2,6 @@ package au.com.addstar.signhider;
 
 import java.util.ArrayList;
 
-import net.minecraft.server.v1_8_R3.Block;
-import net.minecraft.server.v1_8_R3.IBlockData;
-import net.minecraft.server.v1_8_R3.PacketPlayOutMapChunk.ChunkMap;
-import net.minecraft.server.v1_8_R3.PacketPlayOutMultiBlockChange.MultiBlockChangeInfo;
-
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
@@ -21,7 +16,7 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.BlockPosition;
-import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
+import com.comphenix.protocol.wrappers.MultiBlockChangeInfo;
 
 public class SignTextRemover extends PacketAdapter
 {
@@ -29,7 +24,7 @@ public class SignTextRemover extends PacketAdapter
 	
 	public SignTextRemover(Plugin plugin)
 	{
-		super(plugin, ListenerPriority.LOWEST, PacketType.Play.Server.UPDATE_SIGN, PacketType.Play.Server.MAP_CHUNK, PacketType.Play.Server.MAP_CHUNK_BULK, PacketType.Play.Server.MULTI_BLOCK_CHANGE);
+		super(plugin, ListenerPriority.LOWEST, PacketType.Play.Server.UPDATE_SIGN, PacketType.Play.Server.MAP_CHUNK, PacketType.Play.Server.MULTI_BLOCK_CHANGE);
 	}
 	
 	private boolean canSeeSign(Player player, PacketContainer packet)
@@ -43,14 +38,6 @@ public class SignTextRemover extends PacketAdapter
 		int x = packet.getIntegers().read(0);
 		int z = packet.getIntegers().read(1);
 		
-		boolean full = packet.getBooleans().read(0);
-		
-		ChunkMap data = packet.getSpecificModifier(ChunkMap.class).read(0);
-		
-		// Chunk unload packet
-		if (full && data.b == 0)
-			return true;
-		
 		synchronized(mSender)
 		{
 			mSender.begin(player);
@@ -60,42 +47,13 @@ public class SignTextRemover extends PacketAdapter
 				for(BlockState tile : chunk.getTileEntities())
 				{
 					if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
-						mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
+						mSender.add(tile.getX(), tile.getY(), tile.getZ(), Material.AIR, 0);
 				}
 			}
 	
 			mSender.endWithDelay();
 		}
 		
-		return true;
-	}
-	
-	protected boolean cleanBulkMapChunk(Player player, PacketContainer packet)
-	{
-		if(player == null)
-			return true;
-		
-		int[] x = packet.getIntegerArrays().read(0);
-		int[] z = packet.getIntegerArrays().read(1);
-		
-		synchronized(mSender)
-		{
-			mSender.begin(player);
-			for(int i = 0; i < x.length; ++i)
-			{
-				if(player.getWorld().isChunkLoaded(x[i], z[i]))
-				{
-					Chunk chunk = player.getWorld().getChunkAt(x[i], z[i]);
-					for(BlockState tile : chunk.getTileEntities())
-					{
-						if(tile instanceof Sign && !SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), false))
-							mSender.add(tile.getX(), tile.getY(), tile.getZ(), 0, 0);
-					}
-				}
-			}
-			mSender.endWithDelay();
-		}
-
 		return true;
 	}
 	
@@ -115,28 +73,19 @@ public class SignTextRemover extends PacketAdapter
 		return array;
 	}
 	
-	@SuppressWarnings( "deprecation" )
 	private boolean cleanMultiChange(Player player, PacketContainer packet)
 	{
-		ChunkCoordIntPair coord = packet.getChunkCoordIntPairs().read(0);
-		MultiBlockChangeInfo[] changes = packet.getSpecificModifier(MultiBlockChangeInfo[].class).read(0);
+		MultiBlockChangeInfo[] changes = packet.getMultiBlockChangeInfoArrays().read(0);
 		
 		ArrayList<MultiBlockChangeInfo> newChanges = new ArrayList<MultiBlockChangeInfo>();
-		
-		int chunkX = coord.getChunkX() * 16;
-		int chunkZ = coord.getChunkZ() * 16;
 
 		for(int i = 0; i < changes.length; ++i)
 		{
-			short loc = changes[i].b();
-			IBlockData block = changes[i].c();
-			
-			int blockId = Block.getId(block.getBlock());
-			if(Material.getMaterial(blockId) != Material.SIGN_POST && Material.getMaterial(blockId) != Material.WALL_SIGN)
+			if (changes[i].getData().getType() != Material.SIGN_POST && changes[i].getData().getType() != Material.WALL_SIGN)
 				newChanges.add(changes[i]);
 			else
 			{
-				if(SignHiderPlugin.canSee(player, (loc >> 12) & 0xF + chunkX, loc & 0xFF, (loc >> 8) & 0xF + chunkZ, false))
+				if (SignHiderPlugin.canSee(player, changes[i].getAbsoluteX(), changes[i].getY(), changes[i].getAbsoluteZ(), false))
 					newChanges.add(changes[i]);
 			}
 		}
@@ -168,11 +117,6 @@ public class SignTextRemover extends PacketAdapter
 		else if(event.getPacketType() == Play.Server.MAP_CHUNK)
 		{
 			if(!cleanMapChunk(event.getPlayer(), event.getPacket()))
-				event.setCancelled(true);
-		}
-		else if(event.getPacketType() == Play.Server.MAP_CHUNK_BULK)
-		{
-			if(!cleanBulkMapChunk(event.getPlayer(), event.getPacket()))
 				event.setCancelled(true);
 		}
 		else if(event.getPacketType() == Play.Server.MULTI_BLOCK_CHANGE)

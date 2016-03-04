@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.com.addstar</groupId>
   <artifactId>SignHider</artifactId>
-  <version>1.0.1b${env.BUILD_NUMBER}</version>
+  <version>1.1.0b${env.BUILD_NUMBER}</version>
   <name>SignHider</name>
 
   <repositories>
@@ -19,9 +19,8 @@
     </repository>
     
     <repository>
-      <id>shadowvolt-repo</id>
-      <name>Shadowvolt Maven Repository</name>
-      <url>http://ci.shadowvolt.com/plugin/repository/everything/</url>
+      <id>dmulloy2-snapshots</id>
+      <url>http://repo.dmulloy2.net/content/repositories/snapshots/</url>
     </repository>
   </repositories>
 
@@ -30,15 +29,15 @@
     
     <!-- CraftBukkit Dependency for experimental features -->
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot</artifactId>
-      <version>1.8.7-R0.1-SNAPSHOT</version>
+      <groupId>org.bukkit</groupId>
+      <artifactId>bukkit</artifactId>
+      <version>1.9-R0.1-SNAPSHOT</version>
     </dependency>        
     
     <dependency>
 	  <groupId>com.comphenix.protocol</groupId>
 	  <artifactId>ProtocolLib</artifactId>
-	  <version>3.6.3-SNAPSHOT</version>
+	  <version>3.7-SNAPSHOT</version>
 	</dependency>
   </dependencies>
 

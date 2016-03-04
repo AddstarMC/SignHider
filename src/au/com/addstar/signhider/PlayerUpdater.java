@@ -101,7 +101,7 @@ public class PlayerUpdater implements Listener
 			if(!SignHiderPlugin.canSee(player, loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), false))
 			{
 				if(type == Material.SIGN_POST || type == Material.WALL_SIGN)
-					mSender.add(loc, 0, 0);
+					mSender.add(loc, Material.AIR, 0);
 
 				it.remove();
 			}
@@ -152,7 +152,7 @@ public class PlayerUpdater implements Listener
 							BlockVector loc = new BlockVector(tile.getX(), tile.getY(), tile.getZ());
 							if(nearby.add(loc))
 							{
-								mSender.add(loc, tile.getTypeId(), tile.getData().getData());
+								mSender.add(loc, tile.getType(), tile.getData().getData());
 								
 								if(SignHiderPlugin.canSee(player, tile.getX(), tile.getY(), tile.getZ(), true))
 								{
